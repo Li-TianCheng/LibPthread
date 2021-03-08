@@ -23,6 +23,7 @@ public:
     int getRunningNum() const;
     ThreadPool(const ThreadPool&) = delete;
     void operator=(const ThreadPool&) = delete;
+    ~ThreadPool();
 private:
     void run();
     static void cleanHandler(void* arg);
@@ -33,10 +34,10 @@ private:
         void* arg;
         TaskNode(void (*task)(void *), void* arg):task(task), arg(arg){};
     };
-    const int threadNum;
+    Mutex mutex;
     std::atomic<int> runningNum;
     const int queueSize;
-    volatile bool shutdown;
+    volatile int shutdown;
     Condition condition;
     vector<Thread> threadPool;
     queue<TaskNode> taskQueue;

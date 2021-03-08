@@ -10,20 +10,15 @@
 class Condition {
 public:
     Condition();
-    explicit Condition(Mutex& mutex);
-    void lock();
-    void unlock();
-    void wait();
-    void wait(const unsigned int timeout);
-    void notify();
-    void notifyAll();
+    void wait(Mutex& mutex);
+    void wait(Mutex& mutex, const unsigned int timeout);
+    void notify(Mutex& mutex);
+    void notifyAll(Mutex& mutex);
     ~Condition();
     Condition(const Condition&) = delete;
     void operator=(const Condition&) = delete;
 private:
     pthread_cond_t condition;
-    Mutex *mutex;
-    bool flag;
 };
 
 

@@ -5,22 +5,22 @@
 #include "ThreadPool.h"
 #include <iostream>
 
-ThreadPool::ThreadPool(int threadNum, int queueSize):threadNum(threadNum), condition(),
-            queueSize(queueSize), runningNum(0), shutdown(false), threadPool(threadNum){
+ThreadPool::ThreadPool(int threadNum, int queueSize):mutex(), condition(), queueSize(queueSize),
+runningNum(0), shutdown(0), threadPool(threadNum){
     run();
 }
 
 void ThreadPool::addTask(void (*task)(void *), void *arg) {
-    if (shutdown){
+    if (shutdown > 0){
         std::cout << "线程池正在关闭" << std::endl;
         return;
     }
-    condition.lock();
+    mutex.lock();
     while(taskQueue.size() == queueSize){
-        condition.wait();
+        condition.wait(mutex);
     }
     taskQueue.push(TaskNode(task, arg));
-    condition.notifyAll();
+    condition.notifyAll(mutex);
 }
 
 void ThreadPool::run() {
@@ -30,7 +30,7 @@ void ThreadPool::run() {
 }
 
 void ThreadPool::close() {
-    shutdown = true;
+    shutdown = 2;
     for (auto& thread : threadPool){
         thread.cancel();
         thread.detach();
@@ -38,12 +38,7 @@ void ThreadPool::close() {
 }
 
 void ThreadPool::join() {
-    shutdown = true;
-    condition.lock();
-    while (!taskQueue.empty()){
-        condition.wait();
-    }
-    condition.unlock();
+    shutdown = 1;
     for (auto& thread : threadPool){
         thread.cancel();
         thread.join();
@@ -55,21 +50,21 @@ int ThreadPool::getRunningNum() const {
 }
 
 void ThreadPool::cleanHandler(void *arg) {
-    ((ThreadPool*)arg)->condition.unlock();
+    ((ThreadPool*)arg)->mutex.unlock();
+    ((ThreadPool*)arg)->runningNum--;
 }
 
 void* ThreadPool::taskRoutine(void *arg) {
     pthread_cleanup_push(cleanHandler, arg);
     ThreadPool* curr = (ThreadPool*)arg;
     while (true) {
-        pthread_testcancel();
-        curr->condition.lock();
-        while (curr->taskQueue.empty()){
-            curr->condition.wait();
+        curr->mutex.lock();
+        while (curr->shutdown == 2 || curr->taskQueue.empty()){
+            curr->condition.wait(curr->mutex);
         }
         TaskNode t = curr->taskQueue.front();
         curr->taskQueue.pop();
-        curr->condition.notifyAll();
+        curr->condition.notifyAll(curr->mutex);
         curr->runningNum++;
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
         t.task(t.arg);
@@ -77,4 +72,8 @@ void* ThreadPool::taskRoutine(void *arg) {
         curr->runningNum--;
     }
     pthread_cleanup_pop(0);
+}
+
+ThreadPool::~ThreadPool() {
+    while(runningNum+threadPool.size() != 0){}
 }
