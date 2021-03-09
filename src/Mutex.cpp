@@ -5,7 +5,7 @@
 #include "Mutex.h"
 #include <stdexcept>
 
-Mutex::Mutex() {
+Mutex::Mutex():mutex() {
     if (pthread_mutex_init(&mutex, nullptr) != 0){
         throw std::runtime_error("互斥锁创建错误");
     }

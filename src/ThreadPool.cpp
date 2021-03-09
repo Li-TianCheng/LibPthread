@@ -12,7 +12,7 @@ runningNum(0), shutdown(0), threadPool(threadNum){
 
 void ThreadPool::addTask(void (*task)(void *), void *arg) {
     if (shutdown > 0){
-        std::cout << "线程池正在关闭" << std::endl;
+        std::cerr << "线程池正在关闭" << std::endl;
         return;
     }
     mutex.lock();

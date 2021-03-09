@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <sys/time.h>
 
-Condition::Condition(){
+Condition::Condition():condition(){
     if (pthread_cond_init(&condition, nullptr) != 0){
         throw std::runtime_error("条件变量创建错误");
     }
